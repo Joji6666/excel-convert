@@ -86,6 +86,12 @@ const HEADER_ROW_STYLE = {
   }
 } as const;
 
+const extractKoreanName = (name: string) => {
+  // 한글로만 이루어진 부분을 추출하는 정규식
+  const match = name.match(/^[가-힣]+/);
+  return match ? match[0] : ""; // 매칭된 한글 이름 반환, 없으면 빈 문자열
+};
+
 const useExcel = (): Return => {
   const parseExcelFile = async (
     file: File | undefined
@@ -114,10 +120,10 @@ const useExcel = (): Return => {
           (row: any, rowNumber: any) => {
             if (rowNumber > 3) {
               const tempParam: InputData = {
-                name: (row.getCell(6).value as string) ?? "",
-                birth: (row.getCell(5).value as string) ?? "",
+                name: (extractKoreanName(row.getCell(6).value) as string) ?? "",
+                birth: (row.getCell(5).value.slice(0, 6) as string) ?? "",
                 date: (row.getCell(7).value as string) ?? "",
-                workContent: (row.getCell(11).value as string) ?? "",
+                workContent: (row.getCell(10).value as string) ?? "",
                 occupationType: (row.getCell(4).value as string) ?? ""
               };
 
