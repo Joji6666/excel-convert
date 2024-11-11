@@ -121,9 +121,12 @@ const useExcel = (): Return => {
             if (rowNumber > 3) {
               const tempParam: InputData = {
                 name: (extractKoreanName(row.getCell(6).value) as string) ?? "",
-                birth: (row.getCell(5).value.slice(0, 6) as string) ?? "",
+                birth:
+                  (row.getCell(5).value
+                    ? row.getCell(5).value.slice(0, 6)
+                    : ("" as string)) ?? "",
                 date: (row.getCell(7).value as string) ?? "",
-                workContent: (row.getCell(10).value as string) ?? "",
+                workContent: (row.getCell(11).value as string) ?? "",
                 occupationType: (row.getCell(4).value as string) ?? ""
               };
 
