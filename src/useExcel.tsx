@@ -88,7 +88,7 @@ const HEADER_ROW_STYLE = {
 
 const extractKoreanName = (name: string) => {
   // 한글로만 이루어진 부분을 추출하는 정규식
-  const match = name.match(/^[가-힣]+/);
+  const match = typeof name === "string" ? name.match(/^[가-힣]+/) : name;
   return match ? match[0] : ""; // 매칭된 한글 이름 반환, 없으면 빈 문자열
 };
 
