@@ -2,8 +2,10 @@ import React, { ReactElement, useRef, useState } from "react";
 import popcat from "../src/assets/popcat.png";
 import popcatWow from "../src/assets/popcat-wow.png";
 import useExcel from "./useExcel";
+import Login from "./Login";
 
 function Main(): ReactElement {
+  const [isLogin, setIsLogin] = useState(false);
   const [imageSrc, setImageSrc] = useState(popcat);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { excelDownload } = useExcel();
@@ -49,28 +51,34 @@ function Main(): ReactElement {
         justifyContent: "center"
       }}
     >
-      <input
-        type="file"
-        ref={fileRef}
-        style={{ display: "none" }}
-        multiple
-        onChange={(): void => {
-          handleFileChange();
-        }}
-      />
-      <img
-        onMouseLeave={() => setImageSrc(popcat)}
-        onMouseOver={() => setImageSrc(popcatWow)}
-        onFocus={() => setImageSrc(popcatWow)}
-        onClick={handleClick}
-        src={imageSrc}
-        width={500}
-        height={500}
-        alt="popcat"
-        style={{ cursor: "pointer" }}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-      />
+      {isLogin ? (
+        <>
+          <input
+            type="file"
+            ref={fileRef}
+            style={{ display: "none" }}
+            multiple
+            onChange={(): void => {
+              handleFileChange();
+            }}
+          />
+          <img
+            onMouseLeave={() => setImageSrc(popcat)}
+            onMouseOver={() => setImageSrc(popcatWow)}
+            onFocus={() => setImageSrc(popcatWow)}
+            onClick={handleClick}
+            src={imageSrc}
+            width={500}
+            height={500}
+            alt="popcat"
+            style={{ cursor: "pointer" }}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+          />
+        </>
+      ) : (
+        <Login setIsLogin={setIsLogin} />
+      )}
     </div>
   );
 }

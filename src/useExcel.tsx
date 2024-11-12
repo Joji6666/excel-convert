@@ -119,18 +119,21 @@ const useExcel = (): Return => {
           { includeEmpty: true },
           (row: any, rowNumber: any) => {
             if (rowNumber > 3) {
-              const tempParam: InputData = {
-                name: (extractKoreanName(row.getCell(6).value) as string) ?? "",
-                birth:
-                  (row.getCell(5).value
-                    ? row.getCell(5).value.slice(0, 6)
-                    : ("" as string)) ?? "",
-                date: (row.getCell(7).value as string) ?? "",
-                workContent: (row.getCell(11).value as string) ?? "",
-                occupationType: (row.getCell(4).value as string) ?? ""
-              };
+              if (row.getCell(6).value && row.getCell(6).value !== "") {
+                const tempParam: InputData = {
+                  name:
+                    (extractKoreanName(row.getCell(6).value) as string) ?? "",
+                  birth:
+                    (row.getCell(5).value
+                      ? row.getCell(5).value.slice(0, 6)
+                      : ("" as string)) ?? "",
+                  date: (row.getCell(7).value as string) ?? "",
+                  workContent: (row.getCell(11).value as string) ?? "",
+                  occupationType: (row.getCell(4).value as string) ?? ""
+                };
 
-              data.push(tempParam);
+                data.push(tempParam);
+              }
             }
           }
         );
@@ -255,7 +258,7 @@ const useExcel = (): Return => {
     if (datas.length > 0) {
       console.log(datas, "datas@@");
 
-      const datas1 = datas.map((data) => [data.name, "1", "1", ""]);
+      const datas1 = datas.map((data) => [data.name, "", "1", ""]);
       const datas2 = datas.map((data) => [
         data.occupationType,
         data.name,
