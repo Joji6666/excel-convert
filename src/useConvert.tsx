@@ -23,6 +23,44 @@ const useConvert = (
     });
   };
 
+  const getWeekends = (yearMonth: string): string[] => {
+    // 입력받은 년도와 월로 Date 객체 생성
+    const [year, month] = yearMonth.split("-");
+    const startDate = new Date(Number(year), Number(month) - 1, 1); // 해당 월의 첫날
+    const endDate = new Date(Number(year), Number(month), 0); // 해당 월의 마지막 날
+
+    const weekends = [];
+
+    // 해당 월의 시작일부터 끝일까지 반복하면서 주말 찾기
+    for (let day = startDate; day <= endDate; day.setDate(day.getDate() + 1)) {
+      const dayOfWeek = day.getDay(); // 일요일은 0, 토요일은 6
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        // 주말이면
+        weekends.push(new Date(day)); // 주말 날짜 추가
+      }
+    }
+
+    // 주말 날짜를 "YYYY-MM-DD" 형식으로 변환하여 반환
+    return weekends.map((date) => {
+      const day = date.getDate().toString().padStart(2, "0");
+      return day;
+    });
+  };
+
+  const extractMonthYear = (inputString: string): string | null => {
+    // 정규 표현식으로 'YYYY년 MM월' 형식을 찾기
+    const regex = /(\d{4})년\s*(\d{2})월/;
+    const match = inputString.match(regex);
+
+    if (match) {
+      const year = match[1];
+      const month = match[2];
+      return `${year}-${month}`; // "YYYY-MM" 형식으로 반환
+    } else {
+      return null; // 원하는 형식이 없으면 null 반환
+    }
+  };
+
   const parseWorkInfoData = async (
     file: File
   ): Promise<{
@@ -43,12 +81,12 @@ const useConvert = (
 
     // 데이터를 순차적으로 확인하여 각 사람에 대한 정보 처리
     worksheet.eachRow((row, rowIndex) => {
-      if (rowIndex === 0) {
+      if (rowIndex === 1) {
         workDate = row.getCell(1).text;
       }
 
-      if (rowIndex === 1) {
-        workLocation = row.getCell(1).text;
+      if (rowIndex === 2) {
+        workLocation = row.getCell(2).text;
       }
 
       // 첫 번째 행은 헤더이므로 건너뛰기
@@ -156,7 +194,9 @@ const useConvert = (
 
   const insertWorkerInfo = async (
     file: File,
-    workerInfos: WorkerInfo[]
+    workerInfos: WorkerInfo[],
+    workDate: string,
+    workLocation: string
   ): Promise<void> => {
     const arrayBuffer = await fileToArrayBuffer(file); // File 객체를 ArrayBuffer로 변환
 
@@ -165,17 +205,96 @@ const useConvert = (
 
     const worksheets = workbook.worksheets;
 
-    workerInfos.forEach((workerInfo) => {
+    const yearMonth = extractMonthYear(workDate);
+    let weekends: string[] = [];
+    if (yearMonth) {
+      weekends = getWeekends(yearMonth);
+    }
+
+    console.log(workerInfos, "infos@");
+
+    // const convertedInfos = workerInfos.reduce((acc: WorkerInfo[], cur) => {
+    //   if (!cur.job.includes("화기감시")) {
+    //     acc.push(cur);
+    //   } else {
+    //     const weekendInfo: WorkerInfo = {
+    //       ...cur,
+    //       job: "직영",
+    //       workDays: []
+    //     };
+
+    //     const weekDaysInfo: WorkerInfo = { ...cur, workDays: [] };
+
+    //     cur.workDays.forEach((day, index) => {
+    //       if (weekends.includes((index + 1).toString()) && day === 1) {
+    //         weekendInfo.workDays.push(1);
+    //       } else {
+    //         weekendInfo.workDays.push(0);
+    //       }
+    //     });
+
+    //     acc.push(weekendInfo);
+    //   }
+
+    //   return acc;
+    // }, []);
+
+    const convertedInfos = workerInfos.reduce((acc: WorkerInfo[], cur) => {
+      const prevInfoIndex = acc.findIndex((worker) => worker.id === cur.id); // prevInfo가 있는 인덱스 찾기
+
+      if (prevInfoIndex !== -1) {
+        const prevInfo = acc[prevInfoIndex];
+
+        const prevWorkDays = prevInfo.workDays.filter((day) => day === 1);
+        const currentWorkDays = cur.workDays.filter((day) => day === 1);
+
+        console.log(prevWorkDays.length, currentWorkDays.length);
+
+        // 두 배열을 조합하여 결과를 생성
+        const combinedWorkDays = prevInfo.workDays.map((day, index) => {
+          return prevInfo.workDays[index] === 1 || cur.workDays[index] === 1
+            ? 1
+            : 0;
+        });
+
+        // 새로운 정보 생성
+        const convertedInfo: WorkerInfo = {
+          ...cur,
+          job:
+            prevWorkDays.length > currentWorkDays.length
+              ? prevInfo.job
+              : cur.job,
+          workDays: combinedWorkDays
+        };
+
+        // prevInfo를 convertedInfo로 교체
+        acc[prevInfoIndex] = convertedInfo;
+      } else {
+        acc.push(cur); // prevInfo가 없으면 cur을 새로운 항목으로 추가
+      }
+
+      return acc;
+    }, []);
+
+    console.log(convertedInfos, "conberted infos@@");
+
+    convertedInfos.forEach((workerInfo) => {
       worksheets.forEach((workSheet) => {
         workSheet.eachRow((row, rowIndex) => {
-          if (row.getCell(2).value === workerInfo.name) {
+          if (
+            row.getCell(2).value &&
+            typeof row.getCell(2).value === "string" &&
+            workerInfo.name.includes(row.getCell(2).value as string)
+          ) {
             const topRow = workSheet.getRow(rowIndex - 1);
+            topRow.getCell(5).value = topRow.getCell(5).value
+              ? topRow.getCell(5).value
+              : workerInfo.job;
+            topRow.getCell(1).value = workerInfo.code;
             topRow.getCell(8).value = workerInfo.id;
             topRow.getCell(13).value = workerInfo.phone;
             topRow.getCell(18).value = workerInfo.unitPrice;
             row.getCell(8).value = workerInfo.address;
-
-            console.log(workerInfo.workDays, "days@");
 
             workerInfo.workDays.forEach((day, index) => {
               if (index < 15) {
@@ -192,6 +311,37 @@ const useConvert = (
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/octet-stream" });
     saveAs(blob, "cost_modified_template.xlsx");
+  };
+
+  const deleteSheet = (workbook: ExcelJS.Workbook, sheetName: string) => {
+    const sheet = workbook.getWorksheet(sheetName);
+    if (sheet) {
+      workbook.removeWorksheet(sheet.id); // 시트 삭제
+      console.log(`시트 ${sheetName}이 삭제되었습니다.`);
+    } else {
+      console.log(`시트 ${sheetName}을 찾을 수 없습니다.`);
+    }
+  };
+
+  const copySheet = (workbook: ExcelJS.Workbook, sheetName: string) => {
+    const originalSheet = workbook.getWorksheet(sheetName);
+    if (!originalSheet) {
+      console.log(`Sheet ${sheetName} not found!`);
+      return;
+    }
+
+    // 새 시트 생성
+    const newSheet = workbook.addWorksheet(`${sheetName}_Copy`);
+
+    // 기존 시트의 모든 행 복사
+    originalSheet.eachRow((row, rowIndex) => {
+      const newRow = newSheet.getRow(rowIndex);
+      row.eachCell((cell, colNumber) => {
+        const newCell = newRow.getCell(colNumber);
+        newCell.value = cell.value; // 값 복사
+        newCell.style = cell.style; // 스타일 복사
+      });
+    });
   };
 
   const convertWorkData = async (): Promise<void> => {
@@ -227,7 +377,12 @@ const useConvert = (
         []
       );
 
-      await insertWorkerInfo(laborCostFile, workerInfos);
+      await insertWorkerInfo(
+        laborCostFile,
+        workerInfos,
+        parsedWorkData.workDate,
+        parsedWorkData.workLocation
+      );
       console.log(workerInfos, "workerInfos");
     }
 

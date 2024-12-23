@@ -21,7 +21,7 @@ function Main(): ReactElement {
   );
   const [workInformations, setWorkInformations] = useState<null | File>(null);
 
-  const [isConvetOn, setIsConvertOn] = useState(false);
+  const [isConvertOn, setIsConvertOn] = useState(false);
 
   const { excelDownload } = useExcel();
   const { parseBasicInfoData, handleExcelDownload } = useCostExcel();
@@ -72,10 +72,10 @@ function Main(): ReactElement {
   };
 
   useEffect(() => {
-    if (isConvetOn) {
+    if (isConvertOn) {
       convertWorkData();
     }
-  }, [isConvetOn]);
+  }, [isConvertOn]);
 
   return (
     <div
