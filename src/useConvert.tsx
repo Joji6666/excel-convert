@@ -276,11 +276,92 @@ const useConvert = (
       return acc;
     }, []);
 
-    console.log(convertedInfos, "conberted infos@@");
-
     convertedInfos.forEach((workerInfo) => {
       worksheets.forEach((workSheet) => {
         workSheet.eachRow((row, rowIndex) => {
+          if (workSheet.name === "관리자" && rowIndex === 1) {
+            const cellValue = row.getCell(22).value; // 예: "2024년 08월"
+
+            // workDate에서 연도와 월을 추출
+            const match = workDate.match(/(\d{4})년\s(\d{2})월/);
+            if (match) {
+              const newYear = match[1]; // 연도 (예: 2024)
+              const newMonth = match[2]; // 월 (예: 07)
+
+              if (cellValue && typeof cellValue === "string") {
+                // 기존 cellValue에서 연도를 먼저 바꿔주기
+                let updatedCellValue = cellValue.replace(
+                  /(\d{4})년/,
+                  `${newYear}년`
+                );
+
+                // 그 후 월을 바꿔주기
+                updatedCellValue = updatedCellValue.replace(
+                  /(\d{2})월/,
+                  `${newMonth}월`
+                );
+
+                console.log("Updated Cell Value: ", updatedCellValue); // 변경된 cellValue 출력
+
+                // 이 값을 셀에 다시 할당
+                row.getCell(22).value = updatedCellValue;
+              }
+            }
+          }
+
+          if (workSheet.name === "관리자" && rowIndex === 3) {
+            const startDay = row.getCell(28).value; // 예: 2024-08-01
+            const endDay = row.getCell(34).value; // 예: "2024-08-31"
+
+            if (startDay && endDay) {
+              const formattedStartDay = new Date(startDay.toString())
+                .toISOString()
+                .split("T")[0];
+              const formattedEndDay = new Date(endDay.toString())
+                .toISOString()
+                .split("T")[0];
+
+              console.log(formattedStartDay);
+              console.log(formattedEndDay);
+
+              // workDate에서 연도와 월을 추출
+              const match = workDate.match(/(\d{4})년\s(\d{2})월/);
+              if (match) {
+                const newYear = match[1]; // 연도 (예: 2024)
+                const newMonth = match[2]; // 월 (예: 07)
+
+                if (
+                  formattedStartDay &&
+                  typeof formattedStartDay === "string"
+                ) {
+                  // 기존 시작일을 연도와 월에 맞게 수정
+                  let updatedStartDay = formattedStartDay.replace(
+                    /(\d{4})-(\d{2})-(\d{2})/,
+                    `${newYear}-${newMonth}-$3`
+                  );
+
+                  console.log("Updated Start Day: ", updatedStartDay); // 변경된 시작일 출력
+
+                  // 이 값을 셀에 다시 할당
+                  row.getCell(28).value = updatedStartDay;
+                }
+
+                if (formattedEndDay && typeof formattedEndDay === "string") {
+                  // 기존 종료일을 연도와 월에 맞게 수정
+                  let updatedEndDay = formattedEndDay.replace(
+                    /(\d{4})-(\d{2})-(\d{2})/,
+                    `${newYear}-${newMonth}-$3`
+                  );
+
+                  console.log("Updated End Day: ", updatedEndDay); // 변경된 종료일 출력
+
+                  // 이 값을 셀에 다시 할당
+                  row.getCell(34).value = updatedEndDay;
+                }
+              }
+            }
+          }
+
           if (
             row.getCell(2).value &&
             typeof row.getCell(2).value === "string" &&
@@ -311,6 +392,36 @@ const useConvert = (
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/octet-stream" });
     saveAs(blob, "cost_modified_template.xlsx");
+
+    await createEmploymentContract(workerInfos, workDate, workLocation);
+  };
+
+  const createEmploymentContract = async (
+    workerInfos: WorkerInfo[],
+    workDate: string,
+    workLocation: string
+  ): Promise<void> => {
+    const templatePath = "/employment_contract_sample.xlsx"; // 파일 경로
+
+    const workbook = new ExcelJS.Workbook();
+    const response = await fetch(templatePath);
+    const arrayBuffer = await response.arrayBuffer();
+
+    await workbook.xlsx.load(arrayBuffer);
+
+    const worksheet = workbook.worksheets[0];
+
+    console.log(worksheet, "sheet@");
+
+    workerInfos.forEach((workerInfo) => {
+      copySheet(workbook, worksheet.name, workerInfo);
+    });
+
+    // deleteSheet(workbook, worksheet.name);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/octet-stream" });
+    saveAs(blob, "converted_employment_contract.xlsx");
   };
 
   const deleteSheet = (workbook: ExcelJS.Workbook, sheetName: string) => {
@@ -323,7 +434,11 @@ const useConvert = (
     }
   };
 
-  const copySheet = (workbook: ExcelJS.Workbook, sheetName: string) => {
+  const copySheet = (
+    workbook: ExcelJS.Workbook,
+    sheetName: string,
+    workerInfo: WorkerInfo
+  ) => {
     const originalSheet = workbook.getWorksheet(sheetName);
     if (!originalSheet) {
       console.log(`Sheet ${sheetName} not found!`);
@@ -331,16 +446,39 @@ const useConvert = (
     }
 
     // 새 시트 생성
-    const newSheet = workbook.addWorksheet(`${sheetName}_Copy`);
+    const name = workbook.worksheets.find(
+      (workSheet) => workSheet.name === workerInfo.name
+    )
+      ? `${workerInfo.name}-copy`
+      : workerInfo.name;
+    const newSheet = workbook.addWorksheet(`${name}-temp`);
+    const tempModel = structuredClone(originalSheet.model);
+    tempModel.name = `temp-temp-temp`;
+    newSheet.model = tempModel;
+    newSheet.name = name;
 
-    // 기존 시트의 모든 행 복사
-    originalSheet.eachRow((row, rowIndex) => {
+    originalSheet.model.merges.forEach((merge) => newSheet.mergeCells(merge));
+
+    originalSheet.eachRow({ includeEmpty: false }, (row, rowIndex) => {
       const newRow = newSheet.getRow(rowIndex);
-      row.eachCell((cell, colNumber) => {
+
+      // 각 셀을 복사
+      row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
         const newCell = newRow.getCell(colNumber);
-        newCell.value = cell.value; // 값 복사
-        newCell.style = cell.style; // 스타일 복사
+
+        // 스타일 복사
+        newCell.style = cell.style;
+
+        if (cell.style && cell.style.alignment) {
+          newCell.style.alignment = structuredClone(cell.style.alignment);
+        }
       });
+    });
+
+    newSheet.eachRow((row, rowIndex) => {
+      if (rowIndex === 9) {
+        row.getCell(3).value = workerInfo.name;
+      }
     });
   };
 
