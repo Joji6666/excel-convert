@@ -276,6 +276,30 @@ const useConvert = (
       return acc;
     }, []);
 
+    const names = convertedInfos.map((workerInfo) => workerInfo.name);
+    const countMap: { [key: string]: number } = {};
+
+    worksheets.forEach((workSheet) => {
+      workSheet.eachRow((row, rowIndex) => {
+        if (rowIndex > 8) {
+          const targetName = row.getCell(2).value;
+
+          if (
+            targetName &&
+            typeof targetName === "string" &&
+            names.find((name) => name.includes(targetName)) &&
+            !row.getCell(1).value
+          ) {
+            countMap[workSheet.name] = countMap[workSheet.name]
+              ? countMap[workSheet.name] + 1
+              : 1;
+
+            row.getCell(1).value = countMap[workSheet.name];
+          }
+        }
+      });
+    });
+
     convertedInfos.forEach((workerInfo) => {
       worksheets.forEach((workSheet) => {
         workSheet.eachRow((row, rowIndex) => {
@@ -391,7 +415,7 @@ const useConvert = (
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, "cost_modified_template.xlsx");
+    saveAs(blob, `${file.name}.xlsx`);
 
     await createEmploymentContract(workerInfos, workDate, workLocation);
   };
@@ -411,17 +435,15 @@ const useConvert = (
 
     const worksheet = workbook.worksheets[0];
 
-    console.log(worksheet, "sheet@");
-
     workerInfos.forEach((workerInfo) => {
-      copySheet(workbook, worksheet.name, workerInfo);
+      copySheet(workbook, worksheet.name, workerInfo, workDate);
     });
 
-    // deleteSheet(workbook, worksheet.name);
+    deleteSheet(workbook, worksheet.name);
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, "converted_employment_contract.xlsx");
+    saveAs(blob, `${workDate}_근로계약서.xlsx`);
   };
 
   const deleteSheet = (workbook: ExcelJS.Workbook, sheetName: string) => {
@@ -437,7 +459,8 @@ const useConvert = (
   const copySheet = (
     workbook: ExcelJS.Workbook,
     sheetName: string,
-    workerInfo: WorkerInfo
+    workerInfo: WorkerInfo,
+    workDate: string
   ) => {
     const originalSheet = workbook.getWorksheet(sheetName);
     if (!originalSheet) {
@@ -478,6 +501,215 @@ const useConvert = (
     newSheet.eachRow((row, rowIndex) => {
       if (rowIndex === 9) {
         row.getCell(3).value = workerInfo.name;
+        row.getCell(7).value = workerInfo.id;
+        row.getCell(16).value = workerInfo.unitPrice;
+      }
+      if (rowIndex === 10) {
+        row.getCell(3).value = workerInfo.address;
+      }
+
+      if (rowIndex === 11) {
+        const prevPhoneValue = row.getCell(3).value;
+
+        if (prevPhoneValue && typeof prevPhoneValue === "string") {
+          row.getCell(3).value = prevPhoneValue.replace(
+            /\b\d{3}-\d{4}-\d{4}\b/,
+            workerInfo.phone
+          );
+        }
+      }
+
+      if (rowIndex === 16) {
+        // 정규식으로 은행명, 계좌번호, 예금주 이름 추출
+        const regex = /([가-힣]+)\s([\d-]+)\s(.+)$/;
+
+        // 정규식 적용
+        const match = workerInfo.bankNumber.match(regex);
+
+        if (match) {
+          const bankName = match[1]; // 은행명
+          const accountNumber = match[2]; // 계좌번호
+          const accountHolder = match[3]; // 예금주 이름
+
+          console.log(bankName, "bankBame");
+          console.log(accountHolder, "예금주");
+          console.log(accountNumber, "계좌번호");
+
+          const prevBankInfo = row.getCell(2).value;
+
+          console.log(prevBankInfo, "prev bank info");
+
+          if (prevBankInfo && typeof prevBankInfo === "string") {
+            const updatedString = prevBankInfo
+              .replace(/\(.*\)/, `(${bankName})`) // 은행명 부분을 추출한 은행명으로 교체
+              .replace(/[\d-]+/, accountNumber); // 계좌번호 부분을 수정
+
+            console.log(updatedString, "updatedString");
+            row.getCell(2).value = updatedString;
+            row.getCell(7).value = accountHolder;
+          }
+        } else {
+          console.log("일치하는 패턴을 찾을 수 없습니다.");
+        }
+      }
+
+      if (rowIndex === 20) {
+        // workDate에서 년도와 월만 추출하는 정규식
+        const match = workDate.match(/(\d{4})년\s(\d{2})월/);
+
+        if (match) {
+          const startYear = match[1]; // 시작년도 (2024)
+          const startMonth = match[2]; // 시작월 (07)
+
+          // 기존 cellValue 예시: "2024     년     01월      01일  ~   2024     년     01월     31일"
+          let cellValue = row.getCell(2).value;
+
+          // 기존 공백을 그대로 두고, 년도와 월만 교체하는 정규식 적용
+          if (cellValue && typeof cellValue === "string") {
+            // 월과 날짜를 교체
+            cellValue = cellValue.replace(
+              /(\d{4})\s+년\s+(\d{2})월\s+(\d{2})일/,
+              `${startYear}년 ${startMonth}월 ${"01"}일` // 시작 날짜는 01일로 설정
+            );
+
+            // 마지막 날짜 계산 (해당 월의 마지막 일자 계산)
+            const lastDay = new Date(
+              Number(startYear),
+              parseInt(startMonth),
+              0
+            ).getDate(); // 해당 월의 마지막 일자 계산
+
+            // 끝 날짜를 월 마지막 날짜로 교체
+            cellValue = cellValue.replace(
+              /(\d{4})\s+년\s+(\d{2})월\s+(\d{2})일$/,
+              `${startYear}년 ${startMonth}월 ${lastDay}일`
+            );
+
+            // 수정된 값 적용
+            row.getCell(2).value = cellValue;
+
+            console.log(cellValue); // 결과 확인
+          }
+        }
+      }
+
+      if (rowIndex === 31 || rowIndex === 34) {
+        const cellValue = row.getCell(1).value; // 예: "동의자 성명 : 김청월 (인)"
+
+        if (cellValue && typeof cellValue === "string") {
+          // 정규식으로 "동의자 성명 :" 뒤의 이름을 찾기
+          const nameMatch = cellValue.match(/동의자 성명\s*[:：]\s*([^\(]+)/);
+
+          if (nameMatch) {
+            const updatedName = workerInfo.name; // workerInfo.name으로 바꿔줌
+
+            // 이름을 업데이트
+            const updatedCellValue = cellValue.replace(
+              nameMatch[1],
+              updatedName
+            );
+
+            // 셀 값 업데이트
+            row.getCell(1).value = updatedCellValue;
+
+            console.log("Updated Cell Value: ", updatedCellValue); // 결과 확인
+          }
+        }
+      }
+
+      if (rowIndex === 62) {
+        const cellValue = row.getCell(6).value; // 예: "계 약 일              2024년 01월 01일"
+        console.log(cellValue, "cell value@ datataadat");
+        let updatedCellValue = cellValue; // 초기 값으로 기존 cellValue를 사용
+
+        if (
+          cellValue &&
+          typeof cellValue === "string" &&
+          updatedCellValue &&
+          typeof updatedCellValue === "string"
+        ) {
+          // 1. workerInfo.firstWorkingDay가 있으면 그 값을 사용
+          if (workerInfo.firstWorkingDay) {
+            const firstWorkingDay = new Date(workerInfo.firstWorkingDay); // 첫 근무일을 Date로 변환
+            const year = firstWorkingDay.getFullYear(); // 연도
+            const month = (firstWorkingDay.getMonth() + 1)
+              .toString()
+              .padStart(2, "0"); // 월 (1부터 시작)
+            const day = firstWorkingDay.getDate().toString().padStart(2, "0"); // 날짜
+
+            // 년도 교체: "2024년 "만 변경
+            updatedCellValue = updatedCellValue.replace(
+              /(\d{4})년/,
+              `${year}년` // 연도만 교체하고 뒤 공백도 함께 처리
+            );
+
+            // 월 교체: "01월 "만 변경
+            updatedCellValue = updatedCellValue.replace(
+              /(\d{2})월/,
+              `${month}월` // 월만 교체하고 뒤 공백도 함께 처리
+            );
+
+            // 일 교체: "01일"만 변경
+            updatedCellValue = updatedCellValue.replace(
+              /(\d{2})일/,
+              `${day}일` // 일만 교체
+            );
+
+            // 수정된 값을 셀에 할당
+            row.getCell(6).value = updatedCellValue;
+
+            console.log("Updated Cell Value: ", updatedCellValue); // 변경된 셀 값 확인
+          }
+          // 2. workerInfo.firstWorkingDay가 없으면 다른 문자열에서 년도와 월을 추출
+          else {
+            // workDate에서 년도와 월을 추출 (예: "2024년 07월 일용노무비명세서 ( 2024년 07월 01일부터 2024년 07월 31일까지 )")
+            const workDateMatch = workDate.match(/(\d{4})년\s(\d{2})월/);
+            console.log(workDateMatch, "work date match@#@");
+            if (workDateMatch) {
+              const newYear = workDateMatch[1]; // 연도
+              const newMonth = parseInt(workDateMatch[2], 10); // 월 (07 -> 7로 변환)
+
+              // 년도 교체: "2024년 "만 변경
+              updatedCellValue = updatedCellValue.replace(
+                /(\d{4})년/,
+                `${newYear}년` // 연도만 교체하고 뒤 공백도 함께 처리
+              );
+
+              // 월 교체: "01월 "만 변경
+              updatedCellValue = updatedCellValue.replace(
+                /(\d{2})월/,
+                `${newMonth}월` // 월만 교체하고 뒤 공백도 함께 처리
+              );
+            }
+          }
+        }
+
+        // 변경된 값을 셀에 할당
+        row.getCell(6).value = updatedCellValue;
+
+        console.log("Updated Cell Value: ", updatedCellValue); // 변경된 셀 값 확인
+      }
+
+      if (rowIndex === 64) {
+        const cellValue = row.getCell(6).value; // 예: " 을 근 로 자 김청월 ( 인 )"
+
+        if (cellValue && typeof cellValue === "string") {
+          // 정규식으로 이름 부분 "김청월"을 찾기
+          const nameMatch = cellValue.match(/\s([^\s\(\)]+)\s*\(\s*인\s*\)/);
+
+          if (nameMatch) {
+            const updatedName = workerInfo.name; // workerInfo.name으로 바꿔줌
+
+            // 이름을 업데이트
+            const updatedCellValue = cellValue.replace(
+              nameMatch[1],
+              updatedName
+            );
+
+            // 셀 값 업데이트
+            row.getCell(6).value = updatedCellValue;
+          }
+        }
       }
     });
   };

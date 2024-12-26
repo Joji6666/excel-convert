@@ -1,20 +1,19 @@
 import React, { ReactElement, useEffect, useRef, useState } from "react";
-import popcat from "../src/assets/popcat.png";
-import popcatWow from "../src/assets/popcat-wow.png";
+
 import useExcel from "./useExcel";
 import Login from "./Login";
 import useCostExcel from "./useCostExcel";
-import { WorkerData } from "./types";
+
 import CostUploader from "./CostUploader";
 import useConvert from "./useConvert";
+import { Input } from "antd";
+import emotionStyled from "@emotion/styled";
 
 function Main(): ReactElement {
   const [isLogin, setIsLogin] = useState(false);
-  const [imageSrc, setImageSrc] = useState(popcat);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const [workerDatas, setWorkerDatas] = useState<WorkerData[]>([]);
   const [laborCostFile, setLaborCostFile] = useState<null | File>(null);
   const [personalInformations, setPersonalInformations] = useState<null | File>(
     null
@@ -43,8 +42,6 @@ function Main(): ReactElement {
 
       const parsedWorkData = await parseBasicInfoData(fileRef.current.files[0]);
 
-      setWorkerDatas(parsedWorkData.workerDatas);
-
       handleExcelDownload(parsedWorkData.workerDatas);
       // parseData(fileRef.current.files[0]); // 엑셀 파일을 넘겨서 수식과 스타일을 유지하면서 처리
 
@@ -52,23 +49,6 @@ function Main(): ReactElement {
 
       fileRef.current.value = "";
     }
-  };
-
-  const handleClick = (): void => {
-    if (fileRef.current) {
-      fileRef.current.click();
-    }
-  };
-
-  const onDrop = (event: React.DragEvent): void => {
-    event.preventDefault();
-    if (event.dataTransfer.files) {
-      handleFiles(event.dataTransfer.files);
-    }
-  };
-
-  const onDragOver = (event: React.DragEvent): void => {
-    event.preventDefault();
   };
 
   useEffect(() => {
@@ -88,36 +68,23 @@ function Main(): ReactElement {
       }}
     >
       {isLogin ? (
-        <>
+        <Container>
           <CostUploader
             setLaborCostFile={setLaborCostFile}
             setPersonalInformations={setPersonalInformations}
             setWorkInformations={setWorkInformations}
             setIsConvertOn={setIsConvertOn}
           />
-          <input
-            type="file"
-            ref={fileRef}
-            style={{ display: "none" }}
-            multiple
-            onChange={(): void => {
-              handleFileChange();
-            }}
-          />
-          <img
-            onMouseLeave={() => setImageSrc(popcat)}
-            onMouseOver={() => setImageSrc(popcatWow)}
-            onFocus={() => setImageSrc(popcatWow)}
-            onClick={handleClick}
-            src={imageSrc}
-            width={500}
-            height={500}
-            alt="popcat"
-            style={{ cursor: "pointer" }}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          />
-        </>
+          <Wrapper>
+            <Label>기계소방 변환기</Label>
+            <Input
+              type="file"
+              onChange={(): void => {
+                handleFileChange();
+              }}
+            />
+          </Wrapper>
+        </Container>
       ) : (
         <Login setIsLogin={setIsLogin} />
       )}
@@ -126,3 +93,23 @@ function Main(): ReactElement {
 }
 
 export default Main;
+
+const Container = emotionStyled.div`
+display: flex;
+gap: 64px;
+align-items: center;
+justify-content: center;
+`;
+
+const Wrapper = emotionStyled.div`
+display: flex;
+gap: 8px;
+align-items: center;
+padding: 16px;
+border: 1px solid black;
+border-radius: 16px;
+`;
+
+const Label = emotionStyled.label`
+min-width: 130px;
+`;
