@@ -12,7 +12,7 @@ import emotionStyled from "@emotion/styled";
 function Main(): ReactElement {
   const [isLogin, setIsLogin] = useState(false);
 
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<any>(null);
 
   const [laborCostFile, setLaborCostFile] = useState<null | File>(null);
   const [personalInformations, setPersonalInformations] = useState<null | File>(
@@ -23,7 +23,7 @@ function Main(): ReactElement {
   const [isConvertOn, setIsConvertOn] = useState(false);
 
   const { excelDownload } = useExcel();
-  const { parseBasicInfoData, handleExcelDownload } = useCostExcel();
+
   const { convertWorkData } = useConvert(
     laborCostFile,
     personalInformations,
@@ -32,23 +32,14 @@ function Main(): ReactElement {
   );
 
   const handleFiles = async (files: FileList): Promise<void> => {
+    console.log(files[0]);
     await excelDownload(files[0]);
   };
 
-  const handleFileChange = async (): Promise<void> => {
-    console.log(fileRef.current, fileRef.current?.files);
-    if (fileRef.current && fileRef.current.files) {
-      console.log(fileRef.current.files);
+  const handleFileChange = async (files: FileList): Promise<void> => {
+    // parseData(fileRef.current.files[0]); // 엑셀 파일을 넘겨서 수식과 스타일을 유지하면서 처리
 
-      const parsedWorkData = await parseBasicInfoData(fileRef.current.files[0]);
-
-      handleExcelDownload(parsedWorkData.workerDatas);
-      // parseData(fileRef.current.files[0]); // 엑셀 파일을 넘겨서 수식과 스타일을 유지하면서 처리
-
-      await handleFiles(fileRef.current.files);
-
-      fileRef.current.value = "";
-    }
+    await handleFiles(files);
   };
 
   useEffect(() => {
@@ -78,9 +69,12 @@ function Main(): ReactElement {
           <Wrapper>
             <Label>기계소방 변환기</Label>
             <Input
+              ref={fileRef}
               type="file"
-              onChange={(): void => {
-                handleFileChange();
+              onChange={(e): void => {
+                if (e.target.files) {
+                  handleFileChange(e.target.files);
+                }
               }}
             />
           </Wrapper>

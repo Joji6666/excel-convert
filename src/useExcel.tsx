@@ -254,7 +254,7 @@ const useExcel = (): Return => {
 
   const excelDownload = async (file: File): Promise<void> => {
     const datas = await parseExcelFile(file);
-
+    console.log(datas, "datas@");
     if (datas.length > 0) {
       console.log(datas, "datas@@");
 
