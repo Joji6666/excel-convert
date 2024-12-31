@@ -511,7 +511,12 @@ const useConvert = (
 
     newSheet.eachRow((row, rowIndex) => {
       if (rowIndex === 9) {
-        row.getCell(3).value = workerInfo.name;
+        const name = workerInfo.name; // 예: "고병규"
+
+        // 이름을 한 글자씩 띄워서 변환
+        const spacedName = name.split("").join(" ");
+
+        row.getCell(3).value = spacedName;
         row.getCell(7).value = workerInfo.id;
         row.getCell(16).value = workerInfo.unitPrice;
       }
@@ -607,6 +612,8 @@ const useConvert = (
       if (rowIndex === 31 || rowIndex === 34) {
         const cellValue = row.getCell(1).value; // 예: "동의자 성명 : 김청월 (인)"
 
+        console.log(cellValue, "cell value@");
+
         if (cellValue && typeof cellValue === "string") {
           // 정규식으로 "동의자 성명 :" 뒤의 이름을 찾기
           const nameMatch = cellValue.match(/동의자 성명\s*[:：]\s*([^\(]+)/);
@@ -620,10 +627,16 @@ const useConvert = (
               updatedName
             );
 
-            // 셀 값 업데이트
-            row.getCell(1).value = updatedCellValue;
+            // 공백 16칸을 삽입
+            const modifiedCellValue = updatedCellValue.replace(
+              /([가-힣]+)(\()/, // 한글 뒤의 '('를 찾는 정규식
+              (_, name, bracket) => `${name}${" ".repeat(16)}${bracket}`
+            );
 
-            console.log("Updated Cell Value: ", updatedCellValue); // 결과 확인
+            // 셀 값 업데이트
+            row.getCell(1).value = modifiedCellValue;
+
+            console.log("Updated Cell Value: ", modifiedCellValue); // 결과 확인
           }
         }
       }
