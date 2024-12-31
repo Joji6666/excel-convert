@@ -535,6 +535,20 @@ const useConvert = (
         }
       }
 
+      if (rowIndex === 15) {
+        const unitPrice = Number(workerInfo.unitPrice); // 숫자 타입으로 변환
+
+        if (unitPrice > 0) {
+          // 3자리 단위로 쉼표 추가하고 원(KRW) 기호 붙이기
+          const formattedUnitPrice = new Intl.NumberFormat("ko-KR", {
+            style: "currency",
+            currency: "KRW"
+          }).format(unitPrice);
+
+          row.getCell(2).value = formattedUnitPrice;
+        }
+      }
+
       if (rowIndex === 16) {
         // 정규식으로 은행명, 계좌번호, 예금주 이름 추출
         const regex = /([가-힣]+)\s([\d-]+)\s(.+)$/;
