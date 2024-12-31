@@ -1,8 +1,7 @@
-import React, { ReactElement, useEffect, useRef, useState } from "react";
+import React, { ReactElement, useEffect, useState } from "react";
 
 import useExcel from "./useExcel";
 import Login from "./Login";
-import useCostExcel from "./useCostExcel";
 
 import CostUploader from "./CostUploader";
 import useConvert from "./useConvert";
@@ -11,8 +10,6 @@ import emotionStyled from "@emotion/styled";
 
 function Main(): ReactElement {
   const [isLogin, setIsLogin] = useState(false);
-
-  const fileRef = useRef<any>(null);
 
   const [laborCostFile, setLaborCostFile] = useState<null | File>(null);
   const [personalInformations, setPersonalInformations] = useState<null | File>(
@@ -37,8 +34,6 @@ function Main(): ReactElement {
   };
 
   const handleFileChange = async (files: FileList): Promise<void> => {
-    // parseData(fileRef.current.files[0]); // 엑셀 파일을 넘겨서 수식과 스타일을 유지하면서 처리
-
     await handleFiles(files);
   };
 
@@ -69,7 +64,6 @@ function Main(): ReactElement {
           <Wrapper>
             <Label>기계소방 변환기</Label>
             <Input
-              ref={fileRef}
               type="file"
               onChange={(e): void => {
                 if (e.target.files) {

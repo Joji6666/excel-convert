@@ -95,8 +95,19 @@ const useConvert = (
       // 첫 번째 줄에 해당하는 기본 정보 (이름, 주민등록번호, 직종, 주소)
       if (rowIndex % 2 === 1) {
         // 홀수 번째 줄 (첫 번째 줄)
+
+        let name = row.getCell(3).text; // 이름
+
+        // 정규식으로 괄호 안에 영어 이름이 있는지 검사
+        const isKoreanOnly = /^[가-힣]+$/.test(name);
+
+        if (!isKoreanOnly && name) {
+          const koreanName = name.match(/^[가-힣]+/);
+
+          name = koreanName ? koreanName[0] : name; // 한글만 추출
+        }
         const jobTitle = row.getCell(2).text; // 직종 (소장, 공무 등)
-        const name = row.getCell(3).text; // 이름
+
         const id = row.getCell(4).text; // 주민등록번호
 
         // 직종계는 무시
