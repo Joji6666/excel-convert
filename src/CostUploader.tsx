@@ -41,7 +41,7 @@ const CostUploader = ({
         />
       </Wrapper>
 
-      <Wrapper>
+      {/* <Wrapper>
         <Label>노무비</Label>
         <Input
           type="file"
@@ -51,7 +51,7 @@ const CostUploader = ({
             }
           }}
         />
-      </Wrapper>
+      </Wrapper> */}
 
       <Wrapper>
         <Button>초기화</Button>
