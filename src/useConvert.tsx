@@ -600,6 +600,29 @@ const useConvert = (
         }
       }
 
+      if (rowIndex === 24) {
+        const cellValue: any = row.getCell(2).value;
+
+        if (cellValue && Array.isArray(cellValue.richText)) {
+          // ✅ unitPrice를 숫자로 변환 후 3자리마다 쉼표 추가
+          const formattedPrice = Number(workerInfo.unitPrice).toLocaleString(
+            "en-US"
+          );
+
+          cellValue.richText = cellValue.richText.map((textObj: any) => {
+            if (textObj.text.includes("\\")) {
+              return {
+                ...textObj,
+                text: textObj.text.replace(/\\[\d,]+/, `\\${formattedPrice}`)
+              };
+            }
+            return textObj;
+          });
+
+          row.getCell(2).value = cellValue; // ✅ 업데이트된 richText 적용
+        }
+      }
+
       if (rowIndex === 31 || rowIndex === 34) {
         const cellValue = row.getCell(1).value; // 예: "동의자 성명 : 김청월 (인)"
 
