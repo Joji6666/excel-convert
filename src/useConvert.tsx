@@ -190,8 +190,6 @@ const useConvert = (
         bankNumber,
         code,
         firstWorkingDay: firstWorkingDay
-          ? new Date(firstWorkingDay).toISOString().split("T")[0]
-          : ""
       };
 
       personalInfos.push(workerInfo);
@@ -495,6 +493,20 @@ const useConvert = (
       });
     });
 
+    // ✅ 현재 연도와 월 가져오기
+    const currentYear = new Date().getFullYear().toString().slice(-2); // "25"
+    const currentMonth = (new Date().getMonth() + 1)
+      .toString()
+      .padStart(2, "0"); // "02"
+
+    // ✅ firstWorkingDay 파싱
+    const [year, month] = workerInfo.firstWorkingDay.split(".");
+
+    // ✅ 현재 연도 및 월과 동일하면 시트 색상 변경
+    if (year === currentYear && month === currentMonth) {
+      newSheet.model.properties.tabColor = { argb: "FFFF00" };
+    }
+
     newSheet.eachRow((row, rowIndex) => {
       if (rowIndex === 9) {
         const name = workerInfo.name; // 예: "고병규"
@@ -573,12 +585,21 @@ const useConvert = (
 
           // 기존 공백을 그대로 두고, 년도와 월만 교체하는 정규식 적용
           if (cellValue && typeof cellValue === "string") {
-            // 월과 날짜를 교체
-            cellValue = cellValue.replace(
-              /(\d{4})\s+년\s+(\d{2})월\s+(\d{2})일/,
-              `${startYear}년 ${startMonth}월 ${"01"}일` // 시작 날짜는 01일로 설정
-            );
+            // ✅ 현재 연도와 월이 동일한 근로자인 경우 "YYYY년 MM월" 형식만 유지
+            if (year === currentYear && month === currentMonth) {
+              cellValue = cellValue.replace(
+                /(\d{4})\s+년\s+(\d{2})월\s+(\d{2})일/,
+                `${startYear}년 ${startMonth}월`
+              );
 
+              console.log("나는 신규자", cellValue);
+            } else {
+              // ✅ 기본적으로 "YYYY년 MM월 DD일" 형식을 유지
+              cellValue = cellValue.replace(
+                /(\d{4})\s+년\s+(\d{2})월\s+(\d{2})일/,
+                `${startYear}년 ${startMonth}월 ${"01"}일` // 시작 날짜는 01일로 설정
+              );
+            }
             // 마지막 날짜 계산 (해당 월의 마지막 일자 계산)
             const lastDay = new Date(
               Number(startYear),
@@ -864,7 +885,7 @@ const useConvert = (
     convertedInfos.forEach((workerInfo) => {
       worksheets.forEach((workSheet) => {
         workSheet.eachRow((row, rowIndex) => {
-          if (workSheet.name === "관리자" && rowIndex === 1) {
+          if (rowIndex === 1) {
             const cellValue = row.getCell(22).value; // 예: "2024년 08월"
 
             // workDate에서 연도와 월을 추출
@@ -892,7 +913,7 @@ const useConvert = (
             }
           }
 
-          if (workSheet.name === "관리자" && rowIndex === 3) {
+          if (rowIndex === 3) {
             const startDay = row.getCell(28).value; // 예: 2024-08-01
             const endDay = row.getCell(34).value; // 예: "2024-08-31"
 
@@ -959,13 +980,19 @@ const useConvert = (
           row.hidden = false;
           topRow.outlineLevel = 0;
           topRow.hidden = false;
+          const formattedPrice = Number(workerInfo.unitPrice).toLocaleString(
+            "en-US"
+          );
 
           // ✅ 데이터 삽입
           topRow.getCell(1).value = workerInfo.code;
+          topRow.getCell(2).value = workerInfo.firstWorkingDay
+            ? `20${workerInfo.firstWorkingDay}`
+            : "";
           topRow.getCell(5).value = workerInfo.job;
           topRow.getCell(8).value = workerInfo.id;
           topRow.getCell(13).value = workerInfo.phone;
-          topRow.getCell(18).value = workerInfo.unitPrice;
+          topRow.getCell(18).value = formattedPrice;
 
           row.getCell(1).value = count;
           row.getCell(5).value =
