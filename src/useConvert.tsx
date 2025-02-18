@@ -557,8 +557,6 @@ const useConvert = (
             row.getCell(2).value = updatedString;
             row.getCell(7).value = accountHolder;
           }
-        } else {
-          console.log("일치하는 패턴을 찾을 수 없습니다.");
         }
       }
 
@@ -931,21 +929,13 @@ const useConvert = (
             : workerInfo.job === worksheet.name
         )
         .forEach((workerInfo) => {
-          let row = worksheet.getRow(prevRowIndex + 1);
-          let topRow = worksheet.getRow(prevRowIndex);
+          const row = worksheet.getRow(prevRowIndex + 1);
+          const topRow = worksheet.getRow(prevRowIndex);
 
-          // ✅ 소계/합계 감지
-          while (
-            row.getCell(1).value === "소계" ||
-            row.getCell(1).value === "합            계"
-          ) {
-            // ✅ 소계 및 합계 행을 아래로 이동 (2칸 추가)
-            worksheet.spliceRows(prevRowIndex, 0, [], []);
-            worksheet.spliceRows(prevRowIndex + 1, 0, [], []);
-
-            row = worksheet.getRow(prevRowIndex + 1);
-            topRow = worksheet.getRow(prevRowIndex);
-          }
+          row.outlineLevel = 0;
+          row.hidden = false;
+          topRow.outlineLevel = 0;
+          topRow.hidden = false;
 
           // ✅ 데이터 삽입
           topRow.getCell(1).value = workerInfo.code;
