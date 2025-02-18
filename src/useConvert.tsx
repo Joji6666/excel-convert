@@ -775,7 +775,8 @@ const useConvert = (
       const workerInfos: WorkerInfo[] = parsedWorkData.workerDatas.reduce(
         (acc: WorkerInfo[], cur) => {
           const targetPersonalInfo = personalInfos.find(
-            (personalInfo) => personalInfo.id === cur.id.replace("-", "")
+            (personalInfo) =>
+              personalInfo.id.replace("-", "") === cur.id.replace("-", "")
           );
 
           acc.push({

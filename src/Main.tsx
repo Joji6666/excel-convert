@@ -60,6 +60,8 @@ function Main(): ReactElement {
             setPersonalInformations={setPersonalInformations}
             setWorkInformations={setWorkInformations}
             setIsConvertOn={setIsConvertOn}
+            workInformations={workInformations}
+            personalInformations={personalInformations}
           />
           <Wrapper>
             <Label>기계소방 변환기</Label>
